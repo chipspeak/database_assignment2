@@ -1,26 +1,110 @@
 //---Queries---
 
 //1. Horror films from 1980 to present that are less than an R rating and have an imdb rating of 7.0 or above.
-db.movies.find( { genres: "Horror", rated: { $nin: ["R", "NC-17"] }, "imdb.rating": { $gte: 7 }, year: { $gte: 1980 } }, { _id:0, title:1, year:1, directors:1, cast:1, genres:1, plot:1, rated:1, "imdb.rating": 1} ).sort( {"imdb.rating": -1 } ).limit(10).pretty()
+db.movies
+  .find(
+    {
+      genres: "Horror",
+      rated: { $nin: ["R", "NC-17"] },
+      "imdb.rating": { $gte: 7 },
+      year: { $gte: 1980 },
+    },
+    {
+      _id: 0,
+      title: 1,
+      year: 1,
+      directors: 1,
+      cast: 1,
+      genres: 1,
+      plot: 1,
+      rated: 1,
+      "imdb.rating": 1,
+    }
+  )
+  .sort({ "imdb.rating": -1 })
+  .limit(10)
+  .pretty();
 
 //2. Romantic comedies starring Adam Sandler with an rotten tomatoes viewer rating of 3 or above.
-db.movies.find( { genres: { $all: [ "Comedy", "Romance" ] }, cast: { $in: [ "Adam Sandler" ] }, "tomatoes.viewer.rating": { $gte: 3 } }, { _id:0, title:1, year:1, cast:1, genres:1, plot:1, "tomatoes.viewer.rating": 1} ).sort( {"tomatoes.viewer.rating": -1 } ).limit(20).pretty()
+db.movies
+  .find(
+    {
+      genres: { $all: ["Comedy", "Romance"] },
+      cast: { $in: ["Adam Sandler"] },
+      "tomatoes.viewer.rating": { $gte: 3 },
+    },
+    {
+      _id: 0,
+      title: 1,
+      year: 1,
+      cast: 1,
+      genres: 1,
+      plot: 1,
+      "tomatoes.viewer.rating": 1,
+    }
+  )
+  .sort({ "tomatoes.viewer.rating": -1 })
+  .limit(20)
+  .pretty();
 
 //3. Multi-Award winning documentaries with a run time of less than 2 hours (regex to match the word wins for awards).
-db.movies.find( { genres: "Documentary", "imdb.rating": { $gte: 9 }, awards: /wins/, runtime: { $lte: 120 } }, { _id:0, title:1, year:1, cast:1, genres:1, awards:1, runtime:1, "imdb.rating": 1 }).sort( {"imdb.rating": -1 } ).limit(10).pretty()
+db.movies
+  .find(
+    {
+      genres: "Documentary",
+      "imdb.rating": { $gte: 9 },
+      awards: /wins/,
+      runtime: { $lte: 120 },
+    },
+    {
+      _id: 0,
+      title: 1,
+      year: 1,
+      cast: 1,
+      genres: 1,
+      awards: 1,
+      runtime: 1,
+      "imdb.rating": 1,
+    }
+  )
+  .sort({ "imdb.rating": -1 })
+  .limit(10)
+  .pretty();
 
 //4. A count of films directed by Steven Spielberg and starring Tom Hanks from 2010 onwards
-db.movies.find( { directors: { $in: [ "Steven Spielberg" ] }, cast: { $in: [ "Tom Hanks" ] }, year: { $gte: 2010 } } ).count()
+db.movies
+  .find({
+    directors: { $in: ["Steven Spielberg"] },
+    cast: { $in: ["Tom Hanks"] },
+    year: { $gte: 2010 },
+  })
+  .count();
 
 //5. Highest rated items on IMDB from the 1990s excluding documentaries
-db.movies.find( { $and: [ { "imdb.rating": { $gte: 8 } }, { year: { $gte: 1990, $lte: 1999 } }, { genres: { $nin: [ "Documentary" ] } } ] }, { _id: 0, title: 1, year: 1, cast: 1, plot: 1, "imdb.rating": 1, genres: 1 } ).sort({ "imdb.rating": -1 }).limit(5).pretty();
-  
+db.movies
+  .find(
+    {
+      $and: [
+        { "imdb.rating": { $gte: 8 } },
+        { year: { $gte: 1990, $lte: 1999 } },
+        { genres: { $nin: ["Documentary"] } },
+      ],
+    },
+    { _id: 0, title: 1, year: 1, cast: 1, plot: 1, "imdb.rating": 1, genres: 1 }
+  )
+  .sort({ "imdb.rating": -1 })
+  .limit(5)
+  .pretty();
+
 //6. A count of the amount of War films based upon a novel that appear in the database that were made prior to 1966 with a runtime of over 2 hours
-db.movies.find( { writers: { $elemMatch: { $regex: /novel/i } }, genres: "War", year: { $lt: 1966 }, runtime: { $gt: 120 } } ).count();
-  
-
-
-
+db.movies
+  .find({
+    writers: { $elemMatch: { $regex: /novel/i } },
+    genres: "War",
+    year: { $lt: 1966 },
+    runtime: { $gt: 120 },
+  })
+  .count();
 
 //---Aggregate pipelines
 
@@ -33,7 +117,27 @@ $group is then used to group the documents by directors and totalFilms is calcul
 $min and $max are also used on the year fields for use in displaying the earliest and latest film from the list
 $project is used to format the display to id, totalfilms, earliest and latest before sorting by totalFilms in which they direct and appear
 */
-db.movies.aggregate([ { $match: { $and: [{ directors: { $ne: null } }, { cast: { $ne: null } }] } }, { $unwind: "$directors" }, { $addFields: { directorInCast: { $in: ["$directors", "$cast"] } } }, { $match: { directorInCast: true } }, { $group: { _id: "$directors", totalFilms: { $sum: 1 }, earliest: { $min: "$year" }, latest: { $max: "$year" } } }, { $project: { _id: 1, totalFilms: 1, earliest: 1, latest: 1 } }, { $sort: { totalFilms: -1 } }, { $limit: 10 } ]).pretty();
+db.movies
+  .aggregate([
+    {
+      $match: { $and: [{ directors: { $ne: null } }, { cast: { $ne: null } }] },
+    },
+    { $unwind: "$directors" },
+    { $addFields: { directorInCast: { $in: ["$directors", "$cast"] } } },
+    { $match: { directorInCast: true } },
+    {
+      $group: {
+        _id: "$directors",
+        totalFilms: { $sum: 1 },
+        earliest: { $min: "$year" },
+        latest: { $max: "$year" },
+      },
+    },
+    { $project: { _id: 1, totalFilms: 1, earliest: 1, latest: 1 } },
+    { $sort: { totalFilms: -1 } },
+    { $limit: 10 },
+  ])
+  .pretty();
 
 //2. --- Genres that Cersei Lannister comments on most and their average Rotten Tomatoes Rating
 /*
@@ -45,11 +149,26 @@ $group is then used to group documents by genre before $sum is used to count the
 Additionally averageTomatoesRating is declared as the $avg of the tomatoes ratings on the documents
 $project is then used to format the output. As opposed to the above aggregate, in this one id is left off the output and $round is used limit the average to 1 decimal place.
 */
-db.movies.aggregate([ { $match: { "comments.name": "Cersei Lannister" } }, { $unwind: "$comments" }, { $match: { "comments.name": "Cersei Lannister" } }, { $unwind: "$genres" }, { $group: { _id: "$genres", commentCount: { $sum: 1 }, averageTomatoesRating: { $avg: "$tomatoes.viewer.rating" } } }, { $project: { _id: 0, genre: "$_id", commentCount: 1, averageTomatoesRating: { $round: ["$averageTomatoesRating", 1] } } }, { $sort: { commentCount: -1 } }, { $limit: 5 } ]);
-    
-
-
-
-
-
-
+db.movies.aggregate([
+  { $match: { "comments.name": "Cersei Lannister" } },
+  { $unwind: "$comments" },
+  { $match: { "comments.name": "Cersei Lannister" } },
+  { $unwind: "$genres" },
+  {
+    $group: {
+      _id: "$genres",
+      commentCount: { $sum: 1 },
+      averageTomatoesRating: { $avg: "$tomatoes.viewer.rating" },
+    },
+  },
+  {
+    $project: {
+      _id: 0,
+      genre: "$_id",
+      commentCount: 1,
+      averageTomatoesRating: { $round: ["$averageTomatoesRating", 1] },
+    },
+  },
+  { $sort: { commentCount: -1 } },
+  { $limit: 5 },
+]);
